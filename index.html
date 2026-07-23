@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Grade 5 Theory — Piano Edition</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14171F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gr5 Theory">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-512.png" sizes="512x512" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EDE6D6;
+    --paper-deep:#E3DBC7;
+    --ink:#202A3C;
+    --ink-soft:#4B5468;
+    --brass:#A47B34;
+    --brass-light:#C79A4B;
+    --ebony:#14171F;
+    --wrong:#8B3A3A;
+    --right:#4C6B4F;
+    --line:rgba(32,42,60,0.18);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} *{transition:none !important; animation:none !important;} }
+
+  body{
+    margin:0;
+    background:var(--paper);
+    background-image:
+      linear-gradient(var(--paper-deep) 1px, transparent 1px);
+    background-size: 100% 42px;
+    color:var(--ink);
+    font-family:'Source Sans 3', sans-serif;
+    line-height:1.5;
+  }
+
+  .display{font-family:'Cormorant Garamond', serif;}
+  .mono{font-family:'IBM Plex Mono', monospace; letter-spacing:0.02em;}
+
+  a{color:inherit;}
+
+  /* ===== Title screen ===== */
+  #title-screen{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:2rem 1.25rem;
+    background: radial-gradient(ellipse at 50% 0%, rgba(164,123,52,0.14), transparent 60%), var(--paper);
+  }
+  .grade-numeral{
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-weight:600;
+    font-size:clamp(6rem, 22vw, 11rem);
+    line-height:0.85;
+    color:var(--ink);
+    margin:0;
+    position:relative;
+  }
+  .grade-numeral::after{
+    content:'';
+    position:absolute;
+    left:50%; bottom:-0.5rem;
+    width:3.2em; height:2px;
+    background:var(--brass);
+    transform:translateX(-50%);
+  }
+  .kicker{
+    margin:0 0 0.6rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    color:var(--brass);
+  }
+  .subtitle{
+    margin:1.1rem 0 0;
+    font-size:1.15rem;
+    color:var(--ink-soft);
+    max-width:34ch;
+  }
+  .paper-meta{
+    margin-top:2.4rem;
+    display:flex;
+    gap:1.75rem;
+    flex-wrap:wrap;
+    justify-content:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.78rem;
+    color:var(--ink-soft);
+  }
+  .paper-meta strong{color:var(--ink); font-weight:600;}
+  .begin-btn{
+    margin-top:2.6rem;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    font-family:'Source Sans 3', sans-serif;
+    font-weight:600;
+    font-size:1rem;
+    padding:0.9rem 2.2rem;
+    border-radius:2px;
+    cursor:pointer;
+    letter-spacing:0.02em;
+  }
+  .begin-btn:hover{background:var(--brass);}
+  .begin-btn:focus-visible{outline:3px solid var(--brass); outline-offset:3px;}
+  .install-btn{
+    margin-top:0.9rem;
+    background:none;
+    color:var(--brass);
+    border:1px solid var(--brass);
+    font-family:'Source Sans 3', sans-serif;
+    font-weight:600;
+    font-size:0.9rem;
+    padding:0.65rem 1.6rem;
+    border-radius:2px;
+    cursor:pointer;
+  }
+  .install-btn:hover{background:var(--brass); color:var(--paper);}
+  .ios-hint{
+    margin-top:1rem;
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    max-width:30ch;
+  }
+
+  /* ===== Header / progress staff ===== */
+  #app{display:none;}
+  header.bar{
+    position:sticky; top:0; z-index:50;
+    background:var(--paper);
+    border-bottom:1px solid var(--line);
+    padding:0.85rem 1.25rem 0.6rem;
+  }
+  .bar-top{
+    display:flex; align-items:baseline; justify-content:space-between;
+    max-width:920px; margin:0 auto;
+    flex-wrap:wrap; gap:0.5rem;
+  }
+  .bar-title{font-family:'Cormorant Garamond', serif; font-weight:600; font-size:1.25rem;}
+  .timer{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:1.05rem;
+    padding:0.15rem 0.6rem;
+    border:1px solid var(--line);
+    border-radius:2px;
+    background:rgba(255,255,255,0.35);
+  }
+  .timer.low{color:var(--wrong); border-color:var(--wrong);}
+  .timer-controls button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--ink-soft);
+    padding:0.25rem 0.55rem;
+    border-radius:2px;
+    cursor:pointer;
+    margin-left:0.4rem;
+  }
+  .timer-controls button:hover{border-color:var(--brass); color:var(--brass);}
+
+  .staff-wrap{max-width:920px; margin:0.75rem auto 0; position:relative; height:52px;}
+  .staff-lines{
+    position:absolute; left:0; right:0; top:6px; height:40px;
+    background-image:repeating-linear-gradient(to bottom, var(--line) 0, var(--line) 1px, transparent 1px, transparent 10px);
+  }
+  .staff-note{
+    position:absolute;
+    width:15px; height:11px;
+    border-radius:60% 60% 55% 55%;
+    transform:translate(-50%, -50%) rotate(-12deg);
+    background:transparent;
+    border:2px solid var(--ink-soft);
+    cursor:pointer;
+    transition:top 0.5s ease, background 0.3s ease, border-color 0.3s ease;
+  }
+  .staff-note.done{ background:var(--brass); border-color:var(--brass); }
+  .staff-note .lbl{
+    position:absolute; top:-22px; left:50%; transform:translateX(-50%) rotate(12deg);
+    font-family:'IBM Plex Mono', monospace; font-size:0.68rem; color:var(--ink-soft);
+  }
+
+  /* ===== Layout ===== */
+  main{max-width:760px; margin:0 auto; padding:1.5rem 1.25rem 5rem;}
+  .intro-note{
+    font-size:0.95rem; color:var(--ink-soft); border-left:3px solid var(--brass);
+    padding:0.6rem 0 0.6rem 0.9rem; margin-bottom:2rem;
+  }
+  section.paper-section{margin-bottom:3.2rem;}
+  .section-head{
+    display:flex; align-items:baseline; gap:0.75rem; margin-bottom:0.3rem;
+    border-bottom:1px solid var(--line); padding-bottom:0.5rem;
+  }
+  .section-letter{
+    font-family:'Cormorant Garamond', serif; font-style:italic; font-weight:700;
+    font-size:2.1rem; color:var(--brass); line-height:1;
+  }
+  .section-titles h2{margin:0; font-family:'Cormorant Garamond', serif; font-size:1.5rem; font-weight:600;}
+  .section-titles .marks-tag{font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:var(--ink-soft);}
+
+  .item{margin:1.5rem 0; padding-left:0.1rem;}
+  .item-prompt{display:flex; gap:0.6rem; align-items:baseline; margin-bottom:0.6rem;}
+  .item-num{font-family:'IBM Plex Mono', monospace; font-size:0.85rem; color:var(--brass); flex-shrink:0; padding-top:0.1rem;}
+  .item-text{flex:1;}
+  .item-marks{font-family:'IBM Plex Mono', monospace; font-size:0.7rem; color:var(--ink-soft); white-space:nowrap;}
+
+  .part{
+    display:grid; grid-template-columns:1.6rem 1fr;
+    gap:0.5rem; align-items:start; margin:0.55rem 0 0.55rem 1.6rem;
+  }
+  .part-label{font-family:'IBM Plex Mono', monospace; font-size:0.82rem; color:var(--ink-soft); padding-top:0.5rem;}
+  .part-body{}
+  .part-question{font-size:0.95rem; margin-bottom:0.35rem;}
+
+  .answer-row{display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-top:0.35rem;}
+  input[type=text]{
+    font-family:'Source Sans 3', sans-serif;
+    font-size:0.95rem;
+    background:rgba(255,255,255,0.55);
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:0.45rem 0.6rem;
+    flex:1;
+    min-width:160px;
+    color:var(--ink);
+  }
+  input[type=text]:focus-visible{outline:2px solid var(--brass); outline-offset:1px; border-color:var(--brass);}
+
+  .reveal-btn, .mark-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    background:none;
+    border:1px solid var(--line);
+    padding:0.4rem 0.65rem;
+    border-radius:2px;
+    cursor:pointer;
+    color:var(--ink-soft);
+  }
+  .reveal-btn:hover{border-color:var(--brass); color:var(--brass);}
+  .mark-btn.correct:hover, .mark-btn.correct.active{background:var(--right); color:var(--paper); border-color:var(--right);}
+  .mark-btn.incorrect:hover, .mark-btn.incorrect.active{background:var(--wrong); color:var(--paper); border-color:var(--wrong);}
+  button:focus-visible{outline:2px solid var(--brass); outline-offset:1px;}
+
+  .model-answer{
+    display:none;
+    margin-top:0.5rem;
+    padding:0.6rem 0.75rem;
+    background:rgba(164,123,52,0.09);
+    border-left:2px solid var(--brass);
+    font-size:0.88rem;
+    color:var(--ink);
+  }
+  .model-answer.open{display:block;}
+  .model-answer .tag{font-family:'IBM Plex Mono', monospace; font-size:0.65rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--brass); display:block; margin-bottom:0.25rem;}
+
+  .finish-block{
+    margin-top:3rem; padding-top:2rem; border-top:1px solid var(--line);
+    text-align:center;
+  }
+  .finish-btn{
+    background:var(--ink); color:var(--paper); border:none;
+    font-family:'Source Sans 3', sans-serif; font-weight:600; font-size:1rem;
+    padding:0.85rem 2rem; border-radius:2px; cursor:pointer;
+  }
+  .finish-btn:hover{background:var(--brass);}
+
+  #results{
+    display:none;
+    margin-top:2rem; padding:1.5rem;
+    border:1px solid var(--line);
+    background:rgba(255,255,255,0.4);
+  }
+  #results.open{display:block;}
+  .results-score{font-family:'Cormorant Garamond', serif; font-size:2.6rem; font-weight:700; color:var(--ink);}
+  .results-breakdown{margin-top:1rem; font-size:0.88rem; color:var(--ink-soft);}
+  .results-breakdown div{display:flex; justify-content:space-between; padding:0.2rem 0; border-bottom:1px dashed var(--line);}
+
+  @media print{
+    header.bar, .begin-btn, .reveal-btn, .mark-btn, .finish-block, #title-screen{display:none !important;}
+    .model-answer{display:block !important; position:static;}
+    body{background:#fff;}
+  }
+
+  @media (max-width:600px){
+    .part{grid-template-columns:1.4rem 1fr;}
+    .section-letter{font-size:1.7rem;}
+  }
+</style>
+</head>
+<body>
+
+<div id="title-screen">
+  <p class="kicker">ABRSM-style Practice Paper</p>
+  <h1 class="grade-numeral">V</h1>
+  <p class="subtitle">Grade 5 Music Theory — Piano Edition. Scales, intervals, chords, transposition, pedalling and terms, framed around the keyboard.</p>
+  <div class="paper-meta">
+    <span><strong>100</strong> marks</span>
+    <span><strong>1h 30m</strong> allowed</span>
+    <span><strong>6</strong> sections</span>
+  </div>
+  <button class="begin-btn" id="beginBtn">Begin test</button>
+  <button class="install-btn" id="installBtn" style="display:none;">Install app</button>
+  <p class="ios-hint" id="iosHint" style="display:none;">On iPhone/iPad: tap <strong>Share</strong> → <strong>Add to Home Screen</strong> to install.</p>
+</div>
+
+<div id="app">
+  <header class="bar">
+    <div class="bar-top">
+      <span class="bar-title">Grade 5 Theory · Piano</span>
+      <div style="display:flex; align-items:center;">
+        <span class="timer mono" id="timerDisplay">90:00</span>
+        <span class="timer-controls">
+          <button id="pauseBtn">Pause</button>
+        </span>
+      </div>
+    </div>
+    <div class="staff-wrap">
+      <div class="staff-lines"></div>
+      <div id="staffNotes"></div>
+    </div>
+  </header>
+
+  <main>
+    <p class="intro-note">Answer in the boxes provided if you'd like to work things out, then reveal the model answer to mark yourself — just as your teacher would against an official ABRSM marking scheme. Self-marking is part of learning to think like an examiner.</p>
+    <div id="sections"></div>
+
+    <div class="finish-block">
+      <button class="finish-btn" id="finishBtn">Finish &amp; see results</button>
+      <div id="results">
+        <div class="results-score"><span id="scoreValue">0</span> / 100</div>
+        <div class="results-breakdown" id="breakdown"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ============ DATA ============ */
+const SECTIONS = [
+  {
+    letter:'A', title:'Scales &amp; Key Signatures', marks:18,
+    items:[
+      { num:'1', text:'Write the key signature for each key (name the sharps or flats).', marks:4,
+        parts:[
+          {label:'a', q:'A major', a:'3 sharps: F♯, C♯, G♯', m:1},
+          {label:'b', q:'E♭ major', a:'3 flats: B♭, E♭, A♭', m:1},
+          {label:'c', q:'F♯ minor (harmonic)', a:'3 sharps: F♯, C♯, G♯ — the same signature as its relative major, A major. The raised 7th (E♯) is written as an accidental, not part of the key signature.', m:1},
+          {label:'d', q:'C minor (melodic)', a:'3 flats: B♭, E♭, A♭ — the same signature as its relative major, E♭ major. The raised 6th (A) and 7th (B) ascending are accidentals.', m:1},
+        ]},
+      { num:'2', text:'Write, in note names, the ascending harmonic minor scale of G minor.', marks:4,
+        a:'G – A – B♭ – C – D – E♭ – F♯ – G' },
+      { num:'3', text:'Write, in note names, the ascending melodic minor scale of B minor.', marks:4,
+        a:'B – C♯ – D – E – F♯ – G♯ – A♯ – B (raised 6th and 7th ascending only)' },
+      { num:'4', text:'Give the technical name for each scale degree in D♭ major.', marks:3,
+        parts:[
+          {label:'a', q:'Degree 4', a:'G♭ — the subdominant', m:1},
+          {label:'b', q:'Degree 6', a:'B♭ — the submediant', m:1},
+          {label:'c', q:'Degree 7', a:'C — the leading note', m:1},
+        ]},
+      { num:'5', text:'Name the major key and its relative minor for a key signature of 4 sharps.', marks:3,
+        a:'E major; relative minor is C♯ minor' },
+    ]
+  },
+  {
+    letter:'B', title:'Grand Staff &amp; Intervals', marks:17,
+    items:[
+      { num:'6', text:'Name the interval between each pair, one note in each clef of the grand staff.', marks:7,
+        parts:[
+          {label:'a', q:'Treble G4 &amp; Bass C3', a:'Perfect 12th (a compound perfect 5th)', m:1},
+          {label:'b', q:'Treble E4 &amp; Bass F3', a:'Major 7th (simple — less than an octave apart)', m:1},
+          {label:'c', q:'Treble B♭4 &amp; Bass D3', a:'Minor 13th (a compound minor 6th)', m:1},
+          {label:'d', q:'Treble A4 &amp; Bass E3', a:'Perfect 11th (a compound perfect 4th)', m:1},
+          {label:'e', q:'Treble C5 &amp; Bass G3', a:'Perfect 11th (a compound perfect 4th)', m:1},
+          {label:'f', q:'Treble F♯4 &amp; Bass A2', a:'Major 13th (a compound major 6th)', m:1},
+          {label:'g', q:'Treble D4 &amp; Bass B♭2', a:'Major 10th (a compound major 3rd)', m:1},
+        ]},
+      { num:'7', text:'Write a note below the given note to form the named interval — useful for spotting left-hand accompaniment intervals.', marks:5,
+        parts:[
+          {label:'a', q:'Perfect 5th below C', a:'F', m:1},
+          {label:'b', q:'Major 6th below E♭', a:'G♭', m:1},
+          {label:'c', q:'Minor 3rd below G', a:'E', m:1},
+          {label:'d', q:'Major 2nd below A♭', a:'G♭', m:1},
+          {label:'e', q:'Perfect 4th below D♯', a:'A♯', m:1},
+        ]},
+      { num:'8', text:'State whether each interval from Question 7 is consonant or dissonant.', marks:5,
+        parts:[
+          {label:'a', q:'P5 below C', a:'Consonant', m:1},
+          {label:'b', q:'M6 below E♭', a:'Consonant', m:1},
+          {label:'c', q:'m3 below G', a:'Consonant', m:1},
+          {label:'d', q:'M2 below A♭', a:'Dissonant', m:1},
+          {label:'e', q:'P4 below D♯', a:'Consonant (treated as a perfect consonance at this level)', m:1},
+        ]},
+    ]
+  },
+  {
+    letter:'C', title:'Chords &amp; Piano Texture', marks:20,
+    items:[
+      { num:'9', text:'In B♭ major, write chords I, IV and V in root position, naming all notes — common left-hand accompaniment chords.', marks:6,
+        parts:[
+          {label:'a', q:'Chord I', a:'B♭ – D – F', m:2},
+          {label:'b', q:'Chord IV', a:'E♭ – G – B♭', m:2},
+          {label:'c', q:'Chord V', a:'F – A – C', m:2},
+        ]},
+      { num:'10', text:'Identify the chord (Roman numeral) formed by each set of notes in A major.', marks:4,
+        parts:[
+          {label:'a', q:'A, C♯, E', a:'I', m:1},
+          {label:'b', q:'D, F♯, A', a:'IV', m:1},
+          {label:'c', q:'E, G♯, B', a:'V', m:1},
+          {label:'d', q:'F♯, A, C♯', a:'vi', m:1},
+        ]},
+      { num:'11', text:'Write chord V7 in C major (all four notes) and explain briefly why it works so well at cadence points.', marks:4,
+        a:'G – B – D – F. The chord contains a dissonant 7th (F) which strongly pulls toward resolution on the tonic, making V7–I a very decisive-sounding cadence.' },
+      { num:'12', text:'A piano left-hand part shows the notes E♭–G–C. Identify the chord and its inversion.', marks:3,
+        a:'C minor triad (C–E♭–G) in first inversion — the 3rd, E♭, is the lowest note.' },
+      { num:'13', text:'Explain the difference between a perfect cadence and a plagal cadence, naming a piano/hymn context for each.', marks:3,
+        a:'A perfect cadence (V–I) gives a strong, conclusive "full stop" close. A plagal cadence (IV–I) is softer and less final — it is often called the "Amen cadence" because of its traditional use at the end of hymns.' },
+    ]
+  },
+  {
+    letter:'D', title:'Transposition', marks:10,
+    items:[
+      { num:'14', text:'Transpose this right-hand melody up a perfect 4th (original key: G major): G – B – D – C – B – A – G.', marks:5,
+        a:'New key: C major. C – E – G – F – E – D – C' },
+      { num:'15', text:'Transpose this left-hand bass line down a major 3rd (original key: E♭ major), and state the new key: E♭ – G – B♭ – A♭ – G – F – E♭.', marks:5,
+        a:'New key: C♭ major (5 sharps enharmonically, B major). Cb – Eb – Gb – Fb – Eb – Db – Cb (enharmonically: B – D♯ – F♯ – E – D♯ – C♯ – B)' },
+    ]
+  },
+  {
+    letter:'E', title:'Pedalling, Ornaments &amp; Notation', marks:17,
+    items:[
+      { num:'16', text:'Name each pedal or ornament marking used in piano scores.', marks:7,
+        parts:[
+          {label:'a', q:'Small note before the main note, slashed stem', a:'Acciaccatura', m:1},
+          {label:'b', q:'Small unslashed note, half the main note\'s value', a:'Appoggiatura', m:1},
+          {label:'c', q:'"Ped." followed later by an asterisk', a:'Depress the damper (sustaining) pedal, then release sharply at the asterisk', m:1},
+          {label:'d', q:'Una corda', a:'The soft (left) pedal — shifts the hammers to strike fewer strings for a softer tone', m:1},
+          {label:'e', q:'Tre corde', a:'Release the soft pedal — return to normal, full-string tone', m:1},
+          {label:'f', q:'Wavy line above a note', a:'Trill — rapid alternation with the note above', m:1},
+          {label:'g', q:'Sideways "S" symbol', a:'Turn', m:1},
+        ]},
+      { num:'17', text:'Simplify: two tied quavers (same pitch) followed by a quaver rest, in 3/4 time.', marks:2,
+        a:'The tied quavers combine into a single crotchet (a tie between equal pitches just extends the sound); the quaver rest stays separate, since rests are never absorbed into a tied note value.' },
+      { num:'18', text:'Give the correct time signature for a bar of: dotted crotchet, quaver, crotchet, crotchet.', marks:3,
+        a:'4/4 — the values add up to 4 beats (1.5 + 0.5 + 1 + 1).' },
+      { num:'19', text:'A 4/4 bar currently has only a minim and a crotchet. Complete it.', marks:5,
+        a:'3 beats are used (minim + crotchet); 1 beat is missing — add a crotchet, or any equivalent combination (e.g. two quavers, four semiquavers) totalling 1 beat.' },
+    ]
+  },
+  {
+    letter:'F', title:'Terms, Pedal Signs &amp; General Knowledge', marks:18,
+    items:[
+      { num:'20', text:'Give the English meaning of each term, all found in piano scores.', marks:10,
+        parts:[
+          {label:'a', q:'Sempre legato', a:'Always smooth and connected', m:1},
+          {label:'b', q:'Smorzando', a:'Dying away — fading, slowing and softening', m:1},
+          {label:'c', q:'Con sordino (piano context)', a:'With a mute — rare on piano, indicating a softened, muffled tone', m:1},
+          {label:'d', q:'Sostenuto', a:'Sustained', m:1},
+          {label:'e', q:'Tranquillo', a:'Calm, tranquil', m:1},
+          {label:'f', q:'Poco a poco', a:'Little by little', m:1},
+          {label:'g', q:'Mezza voce', a:'At a restrained, "half" volume', m:1},
+          {label:'h', q:'Da capo al fine', a:'Repeat from the beginning until the word "fine" (end)', m:1},
+          {label:'i', q:'Sforzando', a:'With sudden force — a strong accent', m:1},
+          {label:'j', q:'Meno mosso', a:'Less movement — slower', m:1},
+        ]},
+      { num:'21', text:'Explain what each piano-specific marking instructs.', marks:4,
+        parts:[
+          {label:'a', q:'Ped. … *', a:'Press the damper pedal, then release it sharply at the asterisk', m:1},
+          {label:'b', q:'Sim. (after pedal marks)', a:'Continue pedalling in a similar manner to that just shown', m:1},
+          {label:'c', q:'8va above a passage', a:'Play one octave higher than written', m:1},
+          {label:'d', q:'8va (bassa) below a passage', a:'Play one octave lower than written', m:1},
+        ]},
+      { num:'22', text:'Name one piano work and its composer from each period.', marks:2,
+        parts:[
+          {label:'a', q:'Baroque', a:'e.g. J. S. Bach — Prelude and Fugue, from The Well-Tempered Clavier', m:1},
+          {label:'b', q:'Romantic', a:'e.g. Frédéric Chopin — Nocturne in E♭ major, Op. 9 No. 2', m:1},
+        ]},
+      { num:'23', text:'State the difference between the damper pedal and the sostenuto pedal.', marks:2,
+        a:'The damper pedal (right) lifts all dampers, letting every string ring freely. The sostenuto pedal (middle) sustains only the notes already held down at the moment it is pressed — later notes are unaffected.' },
+    ]
+  },
+];
+
+/* ============ RENDER ============ */
+const sectionsEl = document.getElementById('sections');
+const staffNotesEl = document.getElementById('staffNotes');
+let score = { earned:0, possible:0 };
+let sectionState = {}; // letter -> {earned, possible, total}
+
+SECTIONS.forEach((sec, si) => {
+  sectionState[sec.letter] = {earned:0, possible:0};
+
+  const secEl = document.createElement('section');
+  secEl.className = 'paper-section';
+  secEl.id = 'section-' + sec.letter;
+  secEl.innerHTML = `
+    <div class="section-head">
+      <div class="section-letter">${sec.letter}</div>
+      <div class="section-titles">
+        <h2>${sec.title}</h2>
+        <div class="marks-tag">${sec.marks} marks</div>
+      </div>
+    </div>
+  `;
+
+  sec.items.forEach(item => {
+    const itemEl = document.createElement('div');
+    itemEl.className = 'item';
+    itemEl.innerHTML = `
+      <div class="item-prompt">
+        <span class="item-num mono">${item.num}.</span>
+        <span class="item-text">${item.text}</span>
+        <span class="item-marks mono">(${item.marks})</span>
+      </div>
+    `;
+
+    if(item.parts){
+      item.parts.forEach(p => {
+        sectionState[sec.letter].possible += p.m;
+        score.possible += p.m;
+        const partEl = buildPart(p.label, p.q, p.a, p.m, sec.letter);
+        itemEl.appendChild(partEl);
+      });
+    } else {
+      sectionState[sec.letter].possible += item.marks;
+      score.possible += item.marks;
+      const partEl = buildPart(null, null, item.a, item.marks, sec.letter);
+      itemEl.appendChild(partEl);
+    }
+
+    secEl.appendChild(itemEl);
+  });
+
+  sectionsEl.appendChild(secEl);
+});
+
+function buildPart(label, q, answer, marks, sectionLetter){
+  const wrap = document.createElement('div');
+  wrap.className = 'part';
+
+  const labelEl = document.createElement('div');
+  labelEl.className = 'part-label mono';
+  labelEl.textContent = label ? label + '.' : '';
+  wrap.appendChild(labelEl);
+
+  const body = document.createElement('div');
+  body.className = 'part-body';
+
+  if(q){
+    const qEl = document.createElement('div');
+    qEl.className = 'part-question';
+    qEl.innerHTML = q;
+    body.appendChild(qEl);
+  }
+
+  const row = document.createElement('div');
+  row.className = 'answer-row';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.setAttribute('aria-label', 'Your answer' + (q ? ' for ' + q : ''));
+  input.placeholder = 'Your answer (optional)';
+  row.appendChild(input);
+
+  const revealBtn = document.createElement('button');
+  revealBtn.className = 'reveal-btn';
+  revealBtn.textContent = 'Reveal answer';
+  row.appendChild(revealBtn);
+
+  const correctBtn = document.createElement('button');
+  correctBtn.className = 'mark-btn correct';
+  correctBtn.textContent = '✓ Got it';
+  row.appendChild(correctBtn);
+
+  const wrongBtn = document.createElement('button');
+  wrongBtn.className = 'mark-btn incorrect';
+  wrongBtn.textContent = '✗ Missed it';
+  row.appendChild(wrongBtn);
+
+  body.appendChild(row);
+
+  const modelEl = document.createElement('div');
+  modelEl.className = 'model-answer';
+  modelEl.innerHTML = `<span class="tag mono">Model answer · ${marks} mark${marks>1?'s':''}</span>${answer}`;
+  body.appendChild(modelEl);
+
+  let marked = null; // null | 'correct' | 'incorrect'
+
+  revealBtn.addEventListener('click', () => {
+    modelEl.classList.toggle('open');
+  });
+
+  function applyMark(state){
+    const secState = sectionState[sectionLetter];
+    if(marked === 'correct'){ score.earned -= marks; secState.earned -= marks; }
+    if(state === 'correct'){ score.earned += marks; secState.earned += marks; }
+    marked = state;
+    correctBtn.classList.toggle('active', state === 'correct');
+    wrongBtn.classList.toggle('active', state === 'incorrect');
+    updateStaff();
+  }
+
+  correctBtn.addEventListener('click', () => applyMark(marked === 'correct' ? null : 'correct'));
+  wrongBtn.addEventListener('click', () => applyMark(marked === 'incorrect' ? null : 'incorrect'));
+
+  wrap.appendChild(body);
+  return wrap;
+}
+
+/* ============ STAFF PROGRESS ============ */
+function updateStaff(){
+  const staffHeight = 40; // px, matches .staff-lines height
+  const n = SECTIONS.length;
+  SECTIONS.forEach((sec, i) => {
+    const noteEl = document.getElementById('note-' + sec.letter);
+    if(!noteEl) return;
+    const st = sectionState[sec.letter];
+    const pct = st.possible ? st.earned / st.possible : 0;
+    const top = 6 + (staffHeight * (1 - Math.max(0, Math.min(1, pct)))); // higher score -> higher note
+    noteEl.style.top = top + 'px';
+    noteEl.classList.toggle('done', pct > 0);
+  });
+}
+
+SECTIONS.forEach((sec, i) => {
+  const n = SECTIONS.length;
+  const left = 6 + (i / (n - 1)) * 88; // percent
+  const note = document.createElement('div');
+  note.className = 'staff-note';
+  note.id = 'note-' + sec.letter;
+  note.style.left = left + '%';
+  note.style.top = '26px';
+  note.title = 'Section ' + sec.letter;
+  note.innerHTML = `<span class="lbl">${sec.letter}</span>`;
+  note.addEventListener('click', () => {
+    document.getElementById('section-' + sec.letter).scrollIntoView({behavior:'smooth', block:'start'});
+  });
+  staffNotesEl.appendChild(note);
+});
+
+/* ============ FINISH / RESULTS ============ */
+document.getElementById('finishBtn').addEventListener('click', () => {
+  const resultsEl = document.getElementById('results');
+  document.getElementById('scoreValue').textContent = score.earned;
+  const breakdown = document.getElementById('breakdown');
+  breakdown.innerHTML = '';
+  SECTIONS.forEach(sec => {
+    const st = sectionState[sec.letter];
+    const row = document.createElement('div');
+    row.innerHTML = `<span>Section ${sec.letter} — ${sec.title}</span><span class="mono">${st.earned} / ${st.possible}</span>`;
+    breakdown.appendChild(row);
+  });
+  resultsEl.classList.add('open');
+  resultsEl.scrollIntoView({behavior:'smooth', block:'center'});
+});
+
+/* ============ TIMER ============ */
+let totalSeconds = 90 * 60;
+let timerInterval = null;
+let paused = false;
+
+function formatTime(s){
+  const m = Math.floor(s/60);
+  const sec = s % 60;
+  return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+}
+
+function tick(){
+  if(paused) return;
+  totalSeconds--;
+  const display = document.getElementById('timerDisplay');
+  display.textContent = formatTime(Math.max(0,totalSeconds));
+  display.classList.toggle('low', totalSeconds <= 300);
+  if(totalSeconds <= 0){
+    clearInterval(timerInterval);
+    display.textContent = "Time's up";
+  }
+}
+
+document.getElementById('pauseBtn').addEventListener('click', (e) => {
+  paused = !paused;
+  e.target.textContent = paused ? 'Resume' : 'Pause';
+});
+
+document.getElementById('beginBtn').addEventListener('click', () => {
+  document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  timerInterval = setInterval(tick, 1000);
+  updateStaff();
+});
+
+/* ============ PWA: service worker + install prompt ============ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+let deferredInstallPrompt = null;
+const installBtn = document.getElementById('installBtn');
+const iosHint = document.getElementById('iosHint');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  installBtn.style.display = 'inline-block';
+});
+
+installBtn.addEventListener('click', async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  installBtn.style.display = 'none';
+});
+
+const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+if (isIos && !isStandalone) {
+  iosHint.style.display = 'block';
+}
+</script>
+</body>
+</html>
