@@ -1,4 +1,4 @@
-const CACHE_NAME = 'grade5-theory-v1';
+const CACHE_NAME = 'grade5-theory-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -24,18 +24,35 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Network-first for the app shell (HTML), so updates show up immediately when online.
+// Falls back to the cached copy only when offline.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
+
+  const isPage = event.request.mode === 'navigate' || event.request.destination === 'document';
+
+  if (isPage) {
+    event.respondWith(
+      fetch(event.request)
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           return response;
         })
-        .catch(() => cached);
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Cache-first for static assets (icons, manifest) — these rarely change.
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      });
     })
   );
 });
