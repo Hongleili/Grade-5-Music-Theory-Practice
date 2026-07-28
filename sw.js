@@ -1,4 +1,4 @@
-const CACHE_NAME = 'grade5-theory-v2';
+const CACHE_NAME = 'grade5-theory-v3';
 const ASSETS = [
   './',
   './index.html',

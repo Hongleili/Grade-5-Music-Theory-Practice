@@ -189,6 +189,8 @@
     padding:0.4rem 0.65rem; border-radius:2px; cursor:pointer; color:var(--ink-soft);
   }
   .reveal-btn:hover{border-color:var(--brass); color:var(--brass);}
+  .reveal-btn:disabled, .mark-btn:disabled{opacity:0.4; cursor:not-allowed;}
+  .reveal-btn:disabled:hover{border-color:var(--line); color:var(--ink-soft);}
   .mark-btn.correct:hover, .mark-btn.correct.active{background:var(--right); color:var(--paper); border-color:var(--right);}
   .mark-btn.incorrect:hover, .mark-btn.incorrect.active{background:var(--wrong); color:var(--paper); border-color:var(--wrong);}
   button:focus-visible{outline:2px solid var(--brass); outline-offset:1px;}
@@ -278,7 +280,7 @@
   </header>
 
   <main>
-    <p class="intro-note">Answer in the boxes provided if you'd like to work things out, then reveal the model answer to mark yourself — just as your teacher would against an official marking scheme.</p>
+    <p class="intro-note">Write your actual answer in the box first — for notation questions, work it out on manuscript paper too. Only once you've written something will the model answer unlock. Mark yourself honestly: ✓ only counts if what you wrote matches, not if the model answer just "looks familiar."</p>
     <div id="sections"></div>
 
     <div class="finish-block">
@@ -757,22 +759,25 @@ function buildPart(label, q, answer, marks, sectionLetter, itemKey, itemMeta){
   const input = document.createElement('input');
   input.type = 'text';
   input.setAttribute('aria-label', 'Your answer' + (q ? ' for ' + q : ''));
-  input.placeholder = 'Your answer (optional)';
+  input.placeholder = 'Write your answer here first…';
   row.appendChild(input);
 
   const revealBtn = document.createElement('button');
   revealBtn.className = 'reveal-btn';
-  revealBtn.textContent = 'Reveal answer';
+  revealBtn.textContent = 'Write an answer to unlock';
+  revealBtn.disabled = true;
   row.appendChild(revealBtn);
 
   const correctBtn = document.createElement('button');
   correctBtn.className = 'mark-btn correct';
   correctBtn.textContent = '✓ Got it';
+  correctBtn.disabled = true;
   row.appendChild(correctBtn);
 
   const wrongBtn = document.createElement('button');
   wrongBtn.className = 'mark-btn incorrect';
   wrongBtn.textContent = '✗ Not quite';
+  wrongBtn.disabled = true;
   row.appendChild(wrongBtn);
 
   body.appendChild(row);
@@ -783,7 +788,19 @@ function buildPart(label, q, answer, marks, sectionLetter, itemKey, itemMeta){
   body.appendChild(modelEl);
 
   let marked = null;
-  revealBtn.addEventListener('click', () => modelEl.classList.toggle('open'));
+
+  input.addEventListener('input', () => {
+    const hasText = input.value.trim().length > 0;
+    revealBtn.disabled = !hasText;
+    revealBtn.textContent = hasText ? 'Reveal answer' : 'Write an answer to unlock';
+  });
+
+  revealBtn.addEventListener('click', () => {
+    if (revealBtn.disabled) return;
+    modelEl.classList.toggle('open');
+    correctBtn.disabled = false;
+    wrongBtn.disabled = false;
+  });
 
   function applyMark(state){
     const secState = sectionState[sectionLetter];
@@ -990,7 +1007,20 @@ document.querySelectorAll('.paper-card').forEach(card => {
 
 /* ============ PWA: service worker + install prompt ============ */
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+  window.addEventListener('load', () => {
+    // updateViaCache:'none' stops the browser reusing an old cached copy of sw.js itself,
+    // which is what usually causes updates to silently fail to show up.
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+      .then((reg) => { reg.update(); })
+      .catch(() => {});
+  });
+  // When a new service worker takes over, reload once so the page and the worker are in sync.
+  let refreshedOnce = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshedOnce) return;
+    refreshedOnce = true;
+    window.location.reload();
+  });
 }
 let deferredInstallPrompt = null;
 const installBtn = document.getElementById('installBtn');
