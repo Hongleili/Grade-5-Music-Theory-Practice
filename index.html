@@ -191,6 +191,11 @@
   .reveal-btn:hover{border-color:var(--brass); color:var(--brass);}
   .reveal-btn:disabled, .mark-btn:disabled{opacity:0.4; cursor:not-allowed;}
   .reveal-btn:disabled:hover{border-color:var(--line); color:var(--ink-soft);}
+  .nudge-msg{
+    font-size:0.78rem; color:var(--brass); opacity:0; transition:opacity 0.2s ease;
+    font-weight:600;
+  }
+  .nudge-msg.show{opacity:1;}
   .mark-btn.correct:hover, .mark-btn.correct.active{background:var(--right); color:var(--paper); border-color:var(--right);}
   .mark-btn.incorrect:hover, .mark-btn.incorrect.active{background:var(--wrong); color:var(--paper); border-color:var(--wrong);}
   button:focus-visible{outline:2px solid var(--brass); outline-offset:1px;}
@@ -280,7 +285,7 @@
   </header>
 
   <main>
-    <p class="intro-note">Write your actual answer in the box first — for notation questions, work it out on manuscript paper too. Only once you've written something will the model answer unlock. Mark yourself honestly: ✓ only counts if what you wrote matches, not if the model answer just "looks familiar."</p>
+    <p class="intro-note">Write your answer in the box first (for notation questions, work it out on manuscript paper too), then tap <strong>Reveal answer</strong> to check it. Mark yourself honestly: ✓ only counts if what you wrote actually matches.</p>
     <div id="sections"></div>
 
     <div class="finish-block">
@@ -736,6 +741,22 @@ function buildApp(sectionsData, randomize, paperLabel){
 }
 
 let activeSectionsData = [];
+let currentAttempt = { name:'', label:'' };
+
+function historyKey(name){
+  return 'theoryHistory_' + name.toLowerCase().replace(/\s+/g, '_');
+}
+
+function loadHistory(name){
+  try{ return JSON.parse(localStorage.getItem(historyKey(name))) || []; }
+  catch(e){ return []; }
+}
+
+function saveHistoryEntry(name, entry){
+  const hist = loadHistory(name);
+  hist.unshift(entry); // newest first
+  localStorage.setItem(historyKey(name), JSON.stringify(hist.slice(0, 50))); // cap at 50 entries
+}
 
 function buildPart(label, q, answer, marks, sectionLetter, itemKey, itemMeta){
   const wrap = document.createElement('div');
@@ -764,20 +785,24 @@ function buildPart(label, q, answer, marks, sectionLetter, itemKey, itemMeta){
 
   const revealBtn = document.createElement('button');
   revealBtn.className = 'reveal-btn';
-  revealBtn.textContent = 'Write an answer to unlock';
-  revealBtn.disabled = true;
+  revealBtn.textContent = 'Reveal answer';
   row.appendChild(revealBtn);
+
+  const nudge = document.createElement('span');
+  nudge.className = 'nudge-msg';
+  nudge.textContent = '✏️ Write an answer above first!';
+  row.appendChild(nudge);
 
   const correctBtn = document.createElement('button');
   correctBtn.className = 'mark-btn correct';
   correctBtn.textContent = '✓ Got it';
-  correctBtn.disabled = true;
+  correctBtn.style.display = 'none';
   row.appendChild(correctBtn);
 
   const wrongBtn = document.createElement('button');
   wrongBtn.className = 'mark-btn incorrect';
   wrongBtn.textContent = '✗ Not quite';
-  wrongBtn.disabled = true;
+  wrongBtn.style.display = 'none';
   row.appendChild(wrongBtn);
 
   body.appendChild(row);
@@ -789,17 +814,16 @@ function buildPart(label, q, answer, marks, sectionLetter, itemKey, itemMeta){
 
   let marked = null;
 
-  input.addEventListener('input', () => {
-    const hasText = input.value.trim().length > 0;
-    revealBtn.disabled = !hasText;
-    revealBtn.textContent = hasText ? 'Reveal answer' : 'Write an answer to unlock';
-  });
-
   revealBtn.addEventListener('click', () => {
-    if (revealBtn.disabled) return;
+    if (input.value.trim().length === 0){
+      nudge.classList.add('show');
+      input.focus();
+      setTimeout(() => nudge.classList.remove('show'), 2200);
+      return;
+    }
     modelEl.classList.toggle('open');
-    correctBtn.disabled = false;
-    wrongBtn.disabled = false;
+    correctBtn.style.display = 'inline-block';
+    wrongBtn.style.display = 'inline-block';
   });
 
   function applyMark(state){
@@ -852,6 +876,15 @@ document.getElementById('finishBtn').addEventListener('click', () => {
   });
   resultsEl.classList.add('open');
   resultsEl.scrollIntoView({behavior:'smooth', block:'center'});
+
+  if(currentAttempt.name){
+    saveHistoryEntry(currentAttempt.name, {
+      date: new Date().toISOString(),
+      paper: currentAttempt.paperName || 'Practice',
+      earned: score.earned,
+      possible: score.possible,
+    });
+  }
 });
 
 document.getElementById('retryBtn').addEventListener('click', () => location.reload());
@@ -929,30 +962,55 @@ document.getElementById('progressLink').addEventListener('click', () => {
   if(!name){ nameHint.classList.add('show'); nameInput.focus(); return; }
   nameHint.classList.remove('show');
 
-  const ranked = rankedWeakItems(name);
   progressPanel.classList.toggle('open');
   if(!progressPanel.classList.contains('open')) return;
+  renderProgressPanel(name);
+});
 
-  if(ranked.length === 0){
-    progressPanel.innerHTML = `<h3>${name}'s progress</h3><p class="progress-empty">No self-marked attempts yet for this name on this device. Complete a practice set and mark your answers to start building a progress picture.</p>`;
-    return;
+function renderProgressPanel(name){
+  const ranked = rankedWeakItems(name);
+  const history = loadHistory(name);
+
+  let historyHtml = '<p class="progress-empty">No completed attempts logged yet.</p>';
+  if(history.length){
+    historyHtml = history.slice(0, 10).map(h => {
+      const d = new Date(h.date);
+      const dateStr = d.toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
+      const pct = h.possible ? Math.round((h.earned / h.possible) * 100) : 0;
+      const cls = pct < 50 ? 'low' : pct < 80 ? 'mid' : 'high';
+      return `<div class="progress-row">
+        <span>${dateStr} — ${h.paper}</span>
+        <span class="pct ${cls}">${h.earned}/${h.possible} <span style="color:var(--ink-soft); font-weight:400;">(${pct}%)</span></span>
+      </div>`;
+    }).join('');
   }
-  const rows = ranked.map(r => {
-    const pct = Math.round(r.accuracy * 100);
-    const cls = pct < 50 ? 'low' : pct < 80 ? 'mid' : 'high';
-    return `<div class="progress-row">
-      <span>Section ${r.meta.section} · Q${r.meta.num} — ${r.meta.desc}</span>
-      <span class="pct ${cls}">${pct}% <span style="color:var(--ink-soft); font-weight:400;">(${r.correct}/${r.total})</span></span>
-    </div>`;
-  }).join('');
-  progressPanel.innerHTML = `<h3>${name}'s progress</h3>${rows}
-    <button class="clear-progress-btn" id="clearProgressBtn">Clear ${name}'s progress on this device</button>`;
+
+  let weakHtml = '<p class="progress-empty">No self-marked answers yet — complete a set and mark ✓/✗ to build a weak-spots picture.</p>';
+  if(ranked.length){
+    weakHtml = ranked.map(r => {
+      const pct = Math.round(r.accuracy * 100);
+      const cls = pct < 50 ? 'low' : pct < 80 ? 'mid' : 'high';
+      return `<div class="progress-row">
+        <span>Section ${r.meta.section} · Q${r.meta.num} — ${r.meta.desc}</span>
+        <span class="pct ${cls}">${pct}% <span style="color:var(--ink-soft); font-weight:400;">(${r.correct}/${r.total})</span></span>
+      </div>`;
+    }).join('');
+  }
+
+  progressPanel.innerHTML = `
+    <h3>${name}'s past attempts</h3>
+    ${historyHtml}
+    <h3 style="margin-top:1.1rem;">${name}'s weak spots</h3>
+    ${weakHtml}
+    <button class="clear-progress-btn" id="clearProgressBtn">Clear ${name}'s progress on this device</button>
+  `;
 
   document.getElementById('clearProgressBtn').addEventListener('click', () => {
     localStorage.removeItem(statsKey(name));
+    localStorage.removeItem(historyKey(name));
     progressPanel.innerHTML = `<h3>${name}'s progress</h3><p class="progress-empty">Progress cleared.</p>`;
   });
-});
+}
 
 /* ---- Build a Focus Practice paper from weakest items ---- */
 function buildFocusData(name){
@@ -984,20 +1042,22 @@ document.querySelectorAll('.paper-card').forEach(card => {
     localStorage.setItem('theoryLastName', name);
 
     const choice = card.getAttribute('data-paper');
-    let data, randomize, label;
+    let data, randomize, label, paperName;
 
-    if(choice === 'random'){ data = BANK_SECTIONS; randomize = true; label = '· Random Set · ' + name; }
-    else if(choice === 'paper1'){ data = PAPER1_SECTIONS; randomize = false; label = '· Past Paper 1 · ' + name; }
-    else if(choice === 'paper2'){ data = BANK_SECTIONS; randomize = false; label = '· Past Paper 2 (Piano) · ' + name; }
+    if(choice === 'random'){ data = BANK_SECTIONS; randomize = true; paperName = 'Random Practice Set'; }
+    else if(choice === 'paper1'){ data = PAPER1_SECTIONS; randomize = false; paperName = 'Past Paper 1'; }
+    else if(choice === 'paper2'){ data = BANK_SECTIONS; randomize = false; paperName = 'Past Paper 2 (Piano)'; }
     else if(choice === 'focus'){
       const focusData = buildFocusData(name);
       if(!focusData){
         alert(name + " doesn't have enough completed & self-marked questions yet to build a Focus Practice set. Try the Random Practice Set first and mark your answers with ✓ / ✗, then come back here.");
         return;
       }
-      data = focusData; randomize = true; label = '· Focus Practice · ' + name;
+      data = focusData; randomize = true; paperName = 'Focus Practice';
     }
+    label = '· ' + paperName + ' · ' + name;
 
+    currentAttempt = { name, label, paperName };
     buildApp(data, randomize, label);
     document.getElementById('title-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
