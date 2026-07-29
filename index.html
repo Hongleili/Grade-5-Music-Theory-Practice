@@ -98,6 +98,26 @@
     font-family:'IBM Plex Mono', monospace; font-size:0.68rem; padding:0.35rem 0.7rem; border-radius:2px; cursor:pointer;
   }
   .clear-progress-btn:hover{border-color:var(--wrong); color:var(--wrong);}
+
+  .sprint-day{
+    border:1px solid var(--line); border-radius:3px; padding:0.7rem 0.85rem; margin-bottom:0.55rem;
+    background:rgba(255,255,255,0.4);
+  }
+  .sprint-day.done{border-color:var(--right); background:rgba(76,107,79,0.08);}
+  .sprint-day-head{display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem;}
+  .sprint-day-title{font-weight:600; font-size:0.9rem;}
+  .sprint-day-badge{
+    font-family:'IBM Plex Mono', monospace; font-size:0.65rem; text-transform:uppercase;
+    letter-spacing:0.06em; color:var(--ink-soft);
+  }
+  .sprint-day-badge.done{color:var(--right); font-weight:600;}
+  .sprint-day-desc{font-size:0.78rem; color:var(--ink-soft); margin:0.25rem 0 0.5rem;}
+  .sprint-day-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:0.72rem; background:none;
+    border:1px solid var(--brass); color:var(--brass); padding:0.35rem 0.8rem; border-radius:2px; cursor:pointer;
+  }
+  .sprint-day-btn:hover{background:var(--brass); color:var(--paper);}
+  .sprint-day-score{font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:var(--ink-soft);}
   .paper-card{
     background:rgba(255,255,255,0.5); border:1px solid var(--line); border-radius:3px;
     padding:0.9rem 1.1rem; cursor:pointer; text-align:left; font-family:'Source Sans 3', sans-serif;
@@ -238,6 +258,10 @@
   </div>
 
   <div class="paper-choices">
+    <button class="paper-card sprint" id="sprintCard">
+      <div class="pc-title">📅 7-Day Sprint <span class="tag">Guided plan</span></div>
+      <div class="pc-desc">A day-by-day plan mapped to the study schedule — each day loads the right topics automatically and tracks what's done.</div>
+    </button>
     <button class="paper-card" data-paper="random">
       <div class="pc-title">Random Practice Set <span class="tag">Fresh each time</span></div>
       <div class="pc-desc">Piano-focused questions, shuffled from a question bank — different keys and notes every attempt.</div>
@@ -255,6 +279,8 @@
       <div class="pc-desc">The original piano-focused paper — same questions every time.</div>
     </button>
   </div>
+
+  <div class="progress-panel" id="sprintPanel"></div>
 
   <button class="progress-link" id="progressLink">📊 See progress for this student</button>
   <div class="progress-panel" id="progressPanel"></div>
@@ -741,7 +767,7 @@ function buildApp(sectionsData, randomize, paperLabel){
 }
 
 let activeSectionsData = [];
-let currentAttempt = { name:'', label:'' };
+let currentAttempt = { name:'', label:'', paperName:'', sprintDay:null };
 
 function historyKey(name){
   return 'theoryHistory_' + name.toLowerCase().replace(/\s+/g, '_');
@@ -884,6 +910,20 @@ document.getElementById('finishBtn').addEventListener('click', () => {
       earned: score.earned,
       possible: score.possible,
     });
+    if(currentAttempt.sprintDay){
+      saveSprintDay(currentAttempt.name, currentAttempt.sprintDay, {
+        completed: true,
+        date: new Date().toISOString(),
+        earned: score.earned,
+        possible: score.possible,
+      });
+      const sprintNote = document.createElement('p');
+      sprintNote.style.marginTop = '1rem';
+      sprintNote.style.color = 'var(--right)';
+      sprintNote.style.fontWeight = '600';
+      sprintNote.textContent = '✓ Day ' + currentAttempt.sprintDay + ' marked complete in the 7-Day Sprint.';
+      resultsEl.appendChild(sprintNote);
+    }
   }
 });
 
@@ -1033,6 +1073,87 @@ function buildFocusData(name){
   return result.length ? result : null;
 }
 
+/* ============ 7-DAY SPRINT ============ */
+const SPRINT_DAYS = [
+  { day:1, title:'Diagnostic — Full Paper', desc:'Timed full paper to see exactly where things stand before drilling anything.', type:'paper1' },
+  { day:2, title:'Key Signatures & Scales', desc:'Section A focus — the foundation everything else builds on.', type:'sections', letters:['A'] },
+  { day:3, title:'Intervals & Chords', desc:'Sections B & C — intervals, triads, inversions, cadences.', type:'sections', letters:['B','C'] },
+  { day:4, title:'Rhythm, Transposition & General Knowledge', desc:'Sections D, E & F — the rest of the syllabus in one pass.', type:'sections', letters:['D','E','F'] },
+  { day:5, title:'Second Mock — Full Paper', desc:'A different full timed paper, to compare directly against Day 1.', type:'random' },
+  { day:6, title:'Focus Practice — Weak Spots', desc:'Targets whatever Day 5 showed is still weak.', type:'focus' },
+  { day:7, title:'Light Taper Review', desc:'Quick terms & scales recall only — no new material before the exam.', type:'sections', letters:['A','F'] },
+];
+
+function sprintKey(name){ return 'theorySprint_' + name.toLowerCase().replace(/\s+/g, '_'); }
+function loadSprint(name){ try{ return JSON.parse(localStorage.getItem(sprintKey(name))) || {}; } catch(e){ return {}; } }
+function saveSprintDay(name, day, entry){
+  const state = loadSprint(name);
+  state['day' + day] = entry;
+  localStorage.setItem(sprintKey(name), JSON.stringify(state));
+}
+
+function buildSprintData(dayConfig, name){
+  if(dayConfig.type === 'paper1') return { data: PAPER1_SECTIONS, randomize:false, paperName:'Day ' + dayConfig.day + ' — Diagnostic' };
+  if(dayConfig.type === 'random') return { data: BANK_SECTIONS, randomize:true, paperName:'Day ' + dayConfig.day + ' — Second Mock' };
+  if(dayConfig.type === 'focus'){
+    const focusData = buildFocusData(name);
+    if(!focusData) return null;
+    return { data: focusData, randomize:true, paperName:'Day ' + dayConfig.day + ' — Focus Practice' };
+  }
+  // 'sections' — filter the bank to just the listed section letters
+  const filtered = BANK_SECTIONS.filter(sec => dayConfig.letters.includes(sec.letter));
+  return { data: filtered, randomize:true, paperName:'Day ' + dayConfig.day + ' — ' + dayConfig.title };
+}
+
+const sprintCard = document.getElementById('sprintCard');
+const sprintPanel = document.getElementById('sprintPanel');
+
+sprintCard.addEventListener('click', () => {
+  const name = getCurrentName();
+  if(!name){ nameHint.classList.add('show'); nameInput.focus(); return; }
+  nameHint.classList.remove('show');
+  sprintPanel.classList.toggle('open');
+  if(sprintPanel.classList.contains('open')) renderSprintPanel(name);
+});
+
+function renderSprintPanel(name){
+  const state = loadSprint(name);
+  const rows = SPRINT_DAYS.map(d => {
+    const entry = state['day' + d.day];
+    const done = !!(entry && entry.completed);
+    const pct = done && entry.possible ? Math.round((entry.earned / entry.possible) * 100) : null;
+    return `
+      <div class="sprint-day ${done ? 'done' : ''}">
+        <div class="sprint-day-head">
+          <span class="sprint-day-title">Day ${d.day} — ${d.title}</span>
+          <span class="sprint-day-badge ${done ? 'done' : ''}">${done ? '✓ Done' : 'Not started'}</span>
+        </div>
+        <p class="sprint-day-desc">${d.desc}</p>
+        ${done ? `<span class="sprint-day-score">Last result: ${entry.earned}/${entry.possible} (${pct}%)</span><br>` : ''}
+        <button class="sprint-day-btn" data-sprint-day="${d.day}">${done ? 'Redo this day' : 'Start Day ' + d.day}</button>
+      </div>`;
+  }).join('');
+
+  sprintPanel.innerHTML = `<h3>${name}'s 7-Day Sprint</h3>${rows}`;
+
+  sprintPanel.querySelectorAll('[data-sprint-day]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const dayNum = parseInt(btn.getAttribute('data-sprint-day'), 10);
+      const dayConfig = SPRINT_DAYS.find(d => d.day === dayNum);
+      const built = buildSprintData(dayConfig, name);
+      if(!built){
+        alert("Not enough self-marked history yet to build Focus Practice for this day. Complete Day 5 first and mark your answers with ✓ / ✗.");
+        return;
+      }
+      currentAttempt = { name, label: '· ' + built.paperName + ' · ' + name, paperName: built.paperName, sprintDay: dayNum };
+      buildApp(built.data, built.randomize, currentAttempt.label);
+      document.getElementById('title-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      timerInterval = setInterval(tick, 1000);
+    });
+  });
+}
+
 /* ============ PAPER SELECTION ============ */
 document.querySelectorAll('.paper-card').forEach(card => {
   card.addEventListener('click', () => {
@@ -1057,7 +1178,7 @@ document.querySelectorAll('.paper-card').forEach(card => {
     }
     label = '· ' + paperName + ' · ' + name;
 
-    currentAttempt = { name, label, paperName };
+    currentAttempt = { name, label, paperName, sprintDay:null };
     buildApp(data, randomize, label);
     document.getElementById('title-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
