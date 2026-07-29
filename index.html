@@ -32,6 +32,25 @@
   .mono{font-family:'IBM Plex Mono', monospace; letter-spacing:0.02em;}
   a{color:inherit;}
 
+  #topNav{
+    position:sticky; top:0; z-index:200;
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--ebony); color:var(--paper);
+    padding:0.5rem 1rem; font-family:'Source Sans 3', sans-serif;
+  }
+  .nav-brand{font-family:'Cormorant Garamond', serif; font-style:italic; font-weight:600; font-size:1.05rem;}
+  .nav-links{display:flex; gap:0.4rem;}
+  .nav-links button{
+    background:none; border:1px solid rgba(237,230,214,0.3); color:var(--paper);
+    font-family:'IBM Plex Mono', monospace; font-size:0.72rem;
+    padding:0.35rem 0.65rem; border-radius:2px; cursor:pointer;
+  }
+  .nav-links button:hover{background:var(--brass); border-color:var(--brass); color:var(--ebony);}
+  .nav-links button:focus-visible{outline:2px solid var(--brass-light); outline-offset:2px;}
+  @media (max-width:480px){
+    .nav-brand{display:none;}
+    #topNav{justify-content:center;}
+  }
   #title-screen{
     min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
     text-align:center; padding:2rem 1.25rem;
@@ -250,6 +269,15 @@
 </style>
 </head>
 <body>
+
+<nav id="topNav">
+  <span class="nav-brand">🎵 Grade 5 Theory</span>
+  <span class="nav-links">
+    <button id="navHome">🏠 Home</button>
+    <button id="navProgress">📊 Progress</button>
+    <button id="navSprint">📅 Sprint</button>
+  </span>
+</nav>
 
 <div id="title-screen">
   <p class="kicker">Practice Paper</p>
@@ -937,6 +965,24 @@ document.getElementById('finishBtn').addEventListener('click', () => {
 });
 
 document.getElementById('retryBtn').addEventListener('click', () => location.reload());
+
+/* ============ TOP NAV BAR ============ */
+function goHome(){
+  if(timerInterval) clearInterval(timerInterval);
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('title-screen').style.display = 'flex';
+  document.getElementById('progressPanel').classList.remove('open');
+  document.getElementById('sprintPanel').classList.remove('open');
+}
+document.getElementById('navHome').addEventListener('click', goHome);
+document.getElementById('navProgress').addEventListener('click', () => {
+  goHome();
+  document.getElementById('progressLink').click();
+});
+document.getElementById('navSprint').addEventListener('click', () => {
+  goHome();
+  document.getElementById('sprintCard').click();
+});
 
 /* ============ TIMER ============ */
 let totalSeconds = 90 * 60;
