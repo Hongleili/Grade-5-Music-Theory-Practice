@@ -904,11 +904,14 @@ document.getElementById('finishBtn').addEventListener('click', () => {
   resultsEl.scrollIntoView({behavior:'smooth', block:'center'});
 
   if(currentAttempt.name){
+    const secondsSpent = Math.max(0, (90 * 60) - totalSeconds);
+    const minutesSpent = Math.round(secondsSpent / 60);
     saveHistoryEntry(currentAttempt.name, {
       date: new Date().toISOString(),
       paper: currentAttempt.paperName || 'Practice',
       earned: score.earned,
       possible: score.possible,
+      minutesSpent: minutesSpent,
     });
     if(currentAttempt.sprintDay){
       saveSprintDay(currentAttempt.name, currentAttempt.sprintDay, {
@@ -1018,8 +1021,14 @@ function renderProgressPanel(name){
       const dateStr = d.toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
       const pct = h.possible ? Math.round((h.earned / h.possible) * 100) : 0;
       const cls = pct < 50 ? 'low' : pct < 80 ? 'mid' : 'high';
+      const mins = h.minutesSpent;
+      const fastThreshold = Math.max(2, Math.ceil((h.possible || 0) / 15));
+      const isFast = typeof mins === 'number' && mins < fastThreshold;
+      const timeLabel = typeof mins === 'number'
+        ? `${mins} min${isFast ? ' ⚡ worth a spot-check' : ''}`
+        : '';
       return `<div class="progress-row">
-        <span>${dateStr} — ${h.paper}</span>
+        <span>${dateStr} — ${h.paper}${timeLabel ? ' · ' + timeLabel : ''}</span>
         <span class="pct ${cls}">${h.earned}/${h.possible} <span style="color:var(--ink-soft); font-weight:400;">(${pct}%)</span></span>
       </div>`;
     }).join('');
